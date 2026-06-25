@@ -15,7 +15,8 @@ const DEFAULT_OPTIONS = {
   selector: '[data-muze-example], muze-live-example',
   updateDelay: 250,
   scriptType: 'module',
-  useHelene: true
+  useHelene: true,
+  console: 'auto'
 }
 
 export function enhanceLiveExamples(options = {}) {
@@ -44,9 +45,14 @@ export class LiveExample {
     this.previewCheck = null
     this.lastGoodPreview = ''
     this.textareas = new Map()
+    this.consoleId = `mle-${Math.random().toString(36).slice(2)}`
+    this.consoleEnabled = false
+    this.inlinePreviewVisible = true
 
     this.setupFields()
+    this.setupModes()
     this.setupPreview()
+    this.setupConsole()
     this.setupEvents()
     this.update()
   }
@@ -93,13 +99,21 @@ export class LiveExample {
     }
   }
 
+  setupModes() {
+    this.consoleEnabled = shouldShowConsole(this.example, this.textareas, this.options)
+    this.inlinePreviewVisible = shouldShowInlinePreview(this.example, this.textareas)
+
+    this.example.dataset.consoleEnabled = String(this.consoleEnabled)
+    this.example.dataset.inlinePreview = this.inlinePreviewVisible ? 'true' : 'false'
+  }
+
   enhanceEditor(textarea, language) {
     const helene = this.options.helene || globalThis.helene
     if (!this.options.useHelene || !helene) return
 
     // Helene currently falls back to eval() for JS validation when Acorn is not
     // available. We keep the editor safe by disabling Helene's HTML/JS language
-    // module in that case; this component still validates JS with new Function().
+    // module in that case; this component still validates JS without executing it.
     const needsSafeParser = language === 'javascript' || language === 'html'
     const originalLanguage = textarea.dataset.heleneLanguage
     if (needsSafeParser && !globalThis.acorn) {
@@ -125,7 +139,7 @@ export class LiveExample {
     this.openButton = document.createElement('button')
     this.openButton.type = 'button'
     this.openButton.className = 'mle-open'
-    this.openButton.textContent = 'Open preview'
+    this.openButton.textContent = this.inlinePreviewVisible ? 'Open preview' : 'Open visual preview'
 
     this.controls.append(this.status, this.openButton)
 
@@ -135,6 +149,7 @@ export class LiveExample {
 
     this.preview = document.createElement('div')
     this.preview.className = 'mle-preview'
+    if (!this.inlinePreviewVisible) this.preview.hidden = true
 
     this.iframe = document.createElement('iframe')
     this.iframe.className = 'mle-frame'
@@ -143,6 +158,24 @@ export class LiveExample {
 
     this.preview.append(this.iframe)
     this.example.append(this.controls, this.errors, this.preview)
+  }
+
+  setupConsole() {
+    if (!this.consoleEnabled) return
+
+    this.console = document.createElement('div')
+    this.console.className = 'mle-console'
+
+    const label = document.createElement('div')
+    label.className = 'mle-console-label'
+    label.textContent = 'Console'
+
+    this.consoleOutput = document.createElement('pre')
+    this.consoleOutput.className = 'mle-console-output'
+    this.consoleOutput.setAttribute('aria-live', 'polite')
+
+    this.console.append(label, this.consoleOutput)
+    this.example.append(this.console)
   }
 
   setupEvents() {
@@ -158,6 +191,10 @@ export class LiveExample {
         this.openExternalPreview()
       }
     })
+
+    if (this.consoleEnabled) {
+      window.addEventListener('message', event => this.receiveConsoleMessage(event))
+    }
   }
 
   scheduleUpdate() {
@@ -173,9 +210,13 @@ export class LiveExample {
 
     if (!validation.ok) return
 
+    this.clearConsole()
+
     this.lastGoodPreview = buildPreviewDocument(files, {
       title: this.example.dataset.title || 'Live example',
-      scriptType: this.example.dataset.scriptType || this.options.scriptType
+      scriptType: this.example.dataset.scriptType || this.options.scriptType,
+      captureConsole: this.consoleEnabled,
+      consoleId: this.consoleId
     })
 
     this.renderPreview(this.lastGoodPreview)
@@ -215,7 +256,12 @@ export class LiveExample {
   renderPreview(html) {
     if (this.previewWindow && !this.previewWindow.closed && this.previewWindow.setPreview) {
       this.previewWindow.setPreview(html)
-    } else if (!this.example.dataset.previewExternal) {
+      return
+    }
+
+    // JavaScript-only examples hide the visual preview, but the hidden iframe is
+    // still used as the sandboxed execution environment for console output.
+    if (!this.example.dataset.previewExternal) {
       this.iframe.srcdoc = html
     }
   }
@@ -230,10 +276,15 @@ export class LiveExample {
 
     this.previewWindow = opened
     opened.document.open()
-    opened.document.write(buildPreviewWindow(this.lastGoodPreview || buildPreviewDocument(this.getFiles())))
+    opened.document.write(buildPreviewWindow(this.lastGoodPreview || buildPreviewDocument(this.getFiles()), {
+      captureConsole: this.consoleEnabled,
+      consoleInitiallyVisible: this.consoleEnabled
+    }))
     opened.document.close()
 
     this.example.dataset.previewExternal = 'true'
+    this.clearConsole()
+    this.iframe.srcdoc = ''
     this.openButton.textContent = 'Close preview window'
     this.status.textContent = 'Preview opened in separate window.'
 
@@ -250,9 +301,30 @@ export class LiveExample {
     this.previewCheck = null
     this.previewWindow = null
     delete this.example.dataset.previewExternal
-    this.openButton.textContent = 'Open preview'
+    this.openButton.textContent = this.inlinePreviewVisible ? 'Open preview' : 'Open visual preview'
     this.status.textContent = 'Inline preview restored.'
+    this.clearConsole()
     if (this.lastGoodPreview) this.iframe.srcdoc = this.lastGoodPreview
+  }
+
+  clearConsole() {
+    if (!this.consoleOutput) return
+    this.consoleOutput.textContent = ''
+  }
+
+  receiveConsoleMessage(event) {
+    if (!this.consoleEnabled || event.source !== this.iframe.contentWindow) return
+    const message = event.data
+    if (!message || message.muzeLiveExampleConsole !== this.consoleId) return
+    this.appendConsoleMessage(message.method, message.args)
+  }
+
+  appendConsoleMessage(method = 'log', args = []) {
+    if (!this.consoleOutput) return
+    const line = document.createElement('div')
+    line.className = `mle-console-line mle-console-${method}`
+    line.textContent = args.join(' ')
+    this.consoleOutput.append(line)
   }
 }
 
@@ -423,6 +495,7 @@ export function validateCSS(source) {
 export function buildPreviewDocument(files, options = {}) {
   const title = escapeHTML(options.title || 'Live example')
   const scriptType = options.scriptType || 'module'
+  const consoleBridge = options.captureConsole ? buildConsoleBridge(options.consoleId || 'preview') : ''
   const css = files.css ? `<style>\n${escapeEndTag(files.css, 'style')}\n</style>` : ''
   const script = files.javascript
     ? `<script type="${escapeAttribute(scriptType)}">\n${escapeEndTag(files.javascript, 'script')}\n</script>`
@@ -437,10 +510,79 @@ export function buildPreviewDocument(files, options = {}) {
 ${css}
 </head>
 <body>
+${consoleBridge}
 ${files.html || ''}
 ${script}
 </body>
 </html>`
+}
+
+export function hasOnlyJavaScript(textareas) {
+  return textareas.has('javascript') && !textareas.has('html') && !textareas.has('css')
+}
+
+function shouldShowConsole(example, textareas, options) {
+  const setting = String(example.dataset.console || example.dataset.consoleOutput || options.console || 'auto').toLowerCase()
+  if (['false', 'off', 'none', '0', 'no'].includes(setting)) return false
+  if (['true', 'on', 'yes', '1', 'div'].includes(setting)) return true
+
+  return hasOnlyJavaScript(textareas)
+}
+
+function shouldShowInlinePreview(example, textareas) {
+  const setting = String(example.dataset.preview || example.dataset.inlinePreview || 'auto').toLowerCase()
+  if (['false', 'off', 'none', '0', 'no', 'hidden'].includes(setting)) return false
+  if (['true', 'on', 'yes', '1', 'iframe'].includes(setting)) return true
+
+  return !hasOnlyJavaScript(textareas)
+}
+
+function buildConsoleBridge(consoleId) {
+  const id = JSON.stringify(consoleId)
+  return `<script data-muze-console-bridge>
+(() => {
+  const id = ${id}
+  const methods = ['log', 'info', 'warn', 'error', 'debug']
+  const original = {}
+  const send = (method, args) => {
+    window.parent.postMessage({
+      muzeLiveExampleConsole: id,
+      method,
+      args: args.map(formatConsoleValue)
+    }, '*')
+  }
+
+  for (const method of methods) {
+    original[method] = console[method]
+    console[method] = (...args) => {
+      try {
+        if (original[method]) original[method].apply(console, args)
+      } finally {
+        send(method, args)
+      }
+    }
+  }
+
+  window.addEventListener('error', event => {
+    const position = event.lineno ? ' at line ' + event.lineno + ', column ' + event.colno : ''
+    send('error', [event.message + position])
+  })
+
+  window.addEventListener('unhandledrejection', event => {
+    send('error', ['Unhandled promise rejection:', event.reason])
+  })
+
+  function formatConsoleValue(value) {
+    if (typeof value === 'string') return value
+    if (value instanceof Error) return value.stack || value.message
+    try {
+      const json = JSON.stringify(value)
+      if (json !== undefined) return json
+    } catch (error) {}
+    return String(value)
+  }
+})()
+</script>`
 }
 
 function wrapLooseExampleSources(root) {
@@ -459,8 +601,42 @@ function wrapLooseExampleSources(root) {
   }
 }
 
-function buildPreviewWindow(previewHTML) {
+function buildPreviewWindow(previewHTML, options = {}) {
   const previewJSON = JSON.stringify(previewHTML).replaceAll(/<\/script/gi, '<\\/script')
+  const consoleInitiallyVisible = options.consoleInitiallyVisible !== false
+  const consolePanel = options.captureConsole
+    ? `<section id="console-wrap"${consoleInitiallyVisible ? '' : ' hidden'}><div id="console-label">Console</div><pre id="console"></pre></section>`
+    : ''
+  const consoleToggle = options.captureConsole
+    ? `<button id="console-toggle" type="button" aria-expanded="${consoleInitiallyVisible ? 'true' : 'false'}">${consoleInitiallyVisible ? 'Hide console' : 'Show console'}</button>`
+    : ''
+  const consoleScript = options.captureConsole ? `
+const consoleWrap = document.getElementById('console-wrap')
+const consoleOutput = document.getElementById('console')
+const consoleToggle = document.getElementById('console-toggle')
+consoleToggle.addEventListener('click', () => {
+  const nextHidden = !consoleWrap.hidden
+  consoleWrap.hidden = nextHidden
+  consoleToggle.textContent = nextHidden ? 'Show console' : 'Hide console'
+  consoleToggle.setAttribute('aria-expanded', String(!nextHidden))
+})
+function clearConsole() {
+  if (consoleOutput) consoleOutput.textContent = ''
+}
+function appendConsoleMessage(method, args) {
+  if (!consoleOutput) return
+  const line = document.createElement('div')
+  line.className = 'console-line console-' + method
+  line.textContent = args.join(' ')
+  consoleOutput.append(line)
+}
+window.addEventListener('message', event => {
+  if (event.source !== preview.contentWindow) return
+  const message = event.data
+  if (!message || !message.muzeLiveExampleConsole) return
+  appendConsoleMessage(message.method, message.args)
+})` : `function clearConsole() {}`
+
   return `<!doctype html>
 <html>
 <head>
@@ -469,14 +645,29 @@ function buildPreviewWindow(previewHTML) {
 <title>Preview</title>
 <style>
 html, body { height: 100%; margin: 0; }
+body { display: grid; grid-template-rows: auto 1fr auto; font: 1rem system-ui, sans-serif; }
+#toolbar { display: flex; justify-content: flex-end; gap: .5rem; padding: .35rem .5rem; border-bottom: 1px solid #ccc; background: #fafafa; }
+#toolbar:empty { display: none; }
+button { font: inherit; }
 iframe { width: 100%; height: 100%; border: 0; }
+#console-wrap { max-height: 35vh; border-top: 1px solid #ccc; font: .875rem system-ui, sans-serif; }
+#console-label { padding: .35rem .5rem; font-weight: 600; background: #f6f6f6; }
+#console { box-sizing: border-box; min-height: 4rem; max-height: 28vh; margin: 0; overflow: auto; padding: .5rem; font: .9rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; }
+.console-line + .console-line { margin-top: .15rem; }
+.console-error { font-weight: 600; }
 </style>
 </head>
 <body>
+<div id="toolbar">${consoleToggle}</div>
 <iframe id="preview" sandbox="allow-scripts"></iframe>
+${consolePanel}
 <script>
 const preview = document.getElementById('preview')
-window.setPreview = html => { preview.srcdoc = html }
+${consoleScript}
+window.setPreview = html => {
+  clearConsole()
+  preview.srcdoc = html
+}
 window.setPreview(${previewJSON})
 </script>
 </body>

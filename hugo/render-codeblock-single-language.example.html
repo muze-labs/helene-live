@@ -9,14 +9,20 @@ into your existing hook.
 
 Markdown:
 
-```html {example=true title="Plain HTML"}
+```html {example=true title="Plain HTML" console=false}
 <p>Hello <strong>world</strong>.</p>
 ```
 */ -}}
 {{- if .Attributes.example -}}
   {{- $title := .Attributes.title | default "" -}}
   {{- $scriptType := .Attributes.scriptType | default "" -}}
-  <div data-muze-example{{ with $title }} data-title="{{ . }}"{{ end }}{{ with $scriptType }} data-script-type="{{ . }}"{{ end }}>
+  {{- $hasConsole := isset .Attributes "console" -}}
+  {{- $console := "" -}}
+  {{- if $hasConsole }}{{ $console = printf "%v" .Attributes.console }}{{ end -}}
+  {{- $hasPreview := isset .Attributes "preview" -}}
+  {{- $preview := "" -}}
+  {{- if $hasPreview }}{{ $preview = printf "%v" .Attributes.preview }}{{ end -}}
+  <div data-muze-example{{ with $title }} data-title="{{ . }}"{{ end }}{{ with $scriptType }} data-script-type="{{ . }}"{{ end }}{{ if $hasConsole }} data-console="{{ $console }}"{{ end }}{{ if $hasPreview }} data-preview="{{ $preview }}"{{ end }}>
     <template data-muze-example-source data-example-language="{{ .Type }}">{{ .Inner | htmlEscape }}</template>
   </div>
 {{- else -}}

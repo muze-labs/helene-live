@@ -54,3 +54,36 @@ The optional file `hugo/render-codeblock-single-language.example.html` shows how
 <p>Hello <strong>world</strong>.</p>
 ```
 ````
+
+JavaScript-only examples show console output automatically and hide the inline visual preview:
+
+````markdown
+```example {title="Console output"}
+--- js
+console.log('Hello from a JavaScript-only example')
+console.info({ answer: 42 })
+```
+````
+
+For examples that also include HTML or CSS, enable console output explicitly:
+
+````markdown
+```example {title="Button logging" console=true}
+--- html
+<button id="log">Log a message</button>
+
+--- js
+document.querySelector('#log').addEventListener('click', () => {
+  console.log('Button clicked')
+})
+```
+````
+
+You can force or hide the inline preview with the optional `preview` attribute:
+
+````markdown
+```example {title="JS with iframe" preview=true}
+--- js
+console.log('This also keeps the visual iframe visible')
+```
+````

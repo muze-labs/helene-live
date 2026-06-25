@@ -3,7 +3,7 @@ Render hook for fenced live examples.
 
 Markdown:
 
-```example {title="Counter"}
+```example {title="Counter" console=true}
 --- html
 <button id="count">Clicked 0 times</button>
 
@@ -18,6 +18,12 @@ Copy this file to: layouts/_markup/render-codeblock-example.html
 */ -}}
 {{- $title := .Attributes.title | default "" -}}
 {{- $scriptType := .Attributes.scriptType | default "" -}}
-<div data-muze-example{{ with $title }} data-title="{{ . }}"{{ end }}{{ with $scriptType }} data-script-type="{{ . }}"{{ end }}>
+{{- $hasConsole := isset .Attributes "console" -}}
+{{- $console := "" -}}
+{{- if $hasConsole }}{{ $console = printf "%v" .Attributes.console }}{{ end -}}
+{{- $hasPreview := isset .Attributes "preview" -}}
+{{- $preview := "" -}}
+{{- if $hasPreview }}{{ $preview = printf "%v" .Attributes.preview }}{{ end -}}
+<div data-muze-example{{ with $title }} data-title="{{ . }}"{{ end }}{{ with $scriptType }} data-script-type="{{ . }}"{{ end }}{{ if $hasConsole }} data-console="{{ $console }}"{{ end }}{{ if $hasPreview }} data-preview="{{ $preview }}"{{ end }}>
   <template data-muze-example-source>{{ .Inner | htmlEscape }}</template>
 </div>

@@ -52,6 +52,29 @@ button.addEventListener('click', () =&gt; {
     <template data-muze-example-source data-example-language="html">&lt;p&gt;Hello &lt;strong&gt;world&lt;/strong&gt;.&lt;/p&gt;</template>
   </div>
 
+
+
+  <p>This fourth example is JavaScript-only, so the console output is shown automatically.</p>
+
+  <div data-muze-example data-title="JavaScript console">
+    <template data-muze-example-source>--- js
+console.log('Hello from the sandboxed preview')
+console.info({ answer: 42 })</template>
+  </div>
+
+  <p>This fifth example has HTML and JavaScript, with console output explicitly enabled.</p>
+
+  <div data-muze-example data-title="Button logging" data-console="true">
+    <template data-muze-example-source>--- html
+&lt;button id=&quot;log&quot;&gt;Log a message&lt;/button&gt;
+
+--- js
+document.querySelector('#log').addEventListener('click', () =&gt; {
+  console.log('Button clicked')
+})</template>
+  </div>
+
+
   <script type="module">
     // Acorn is optional for this component, but recommended with Helene because
     // it prevents Helene's JavaScript validation from falling back to eval().

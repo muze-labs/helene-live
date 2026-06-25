@@ -22,7 +22,7 @@
   width: 100%;
   min-height: 7rem;
   margin: 0;
-  padding: .5rem;
+  padding: 0;
   border: 0;
   font: .95rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
   tab-size: 2;
@@ -67,4 +67,46 @@
 
 .mle[data-preview-external="true"] .mle-preview {
   display: none;
+}
+
+.mle-console {
+  border-top: 1px solid #ccc;
+}
+
+.mle-console-label {
+  padding: .35rem .5rem;
+  background: #f6f6f6;
+  font: 600 .8rem system-ui, sans-serif;
+}
+
+.mle-console-output {
+  box-sizing: border-box;
+  min-height: 4rem;
+  max-height: 12rem;
+  margin: 0;
+  overflow: auto;
+  padding: .5rem;
+  font: .9rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.mle-console-line + .mle-console-line {
+  margin-top: .15rem;
+}
+
+.mle-console-error {
+  font-weight: 600;
+}
+
+.mle[data-preview-external="true"] .mle-console {
+  display: none;
+}
+
+
+.mle-preview[hidden] {
+  display: none;
+}
+
+.mle[data-inline-preview="false"] .mle-controls {
+  border-bottom: 1px solid #ccc;
 }

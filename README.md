@@ -44,7 +44,7 @@ button.addEventListener('click', () => {
 </div>
 ```
 
-Only include the panes you need. HTML-only, CSS-only, HTML+CSS, and HTML+JS examples all work.
+Only include the panes you need. HTML-only, CSS-only, JavaScript-only, HTML+CSS, and HTML+JS examples all work.
 
 ## Author an example in Markdown with Hugo
 
@@ -104,11 +104,67 @@ That lets you write:
 
 Use that only if you are comfortable installing or merging a generic `render-codeblock.html` hook, because it affects all fenced code blocks.
 
+
+## Console output
+
+Console output is optional. It is shown automatically for JavaScript-only examples, because otherwise there is usually no useful visual preview. In that case the inline iframe is hidden and only the console output is shown. The hidden iframe is still present as the sandboxed execution environment.
+
+````markdown
+```example {title="Console example"}
+--- js
+console.log('Hello from JavaScript')
+console.warn('Warnings are captured too')
+```
+````
+
+For examples that also include HTML or CSS, enable console output explicitly:
+
+````markdown
+```example {title="Button with logs" console=true}
+--- html
+<button id="hello">Say hello</button>
+
+--- js
+document.querySelector('#hello').addEventListener('click', () => {
+  console.log('Clicked')
+})
+```
+````
+
+To hide console output for a JavaScript-only example, set `console=false`:
+
+````markdown
+```example {title="Quiet JS" console=false}
+--- js
+console.log('Still visible in developer tools, not in the page')
+```
+````
+
+To force a visual iframe for a JavaScript-only example, set `preview=true` on the wrapper or add a `preview=true` attribute in Hugo and pass it through in your render hook. To hide the inline iframe for any example, set `preview=false`.
+
+In HTML, use the same settings on the wrapper:
+
+```html
+<div data-muze-example data-console="true" data-preview="false">
+  <textarea data-example="javascript">console.log('ready')</textarea>
+</div>
+```
+
+The console bridge is injected into the generated preview document as a small inline script before the example code:
+
+```html
+<script data-muze-console-bridge>
+  // wraps console.log/info/warn/error/debug and uses window.parent.postMessage(...)
+</script>
+```
+
+User code still runs in the sandboxed preview iframe and sends console messages back with `postMessage`, so the preview does not need `allow-same-origin`.
+
 ## Preview window
 
-The `Open preview` button opens a separate preview window. While that window is open, the inline preview is hidden. Closing the window restores the inline preview.
+The `Open preview` button opens a separate preview window. While that window is open, the inline preview and inline console are hidden. Closing the window restores them.
 
-User code runs inside a sandboxed iframe both inline and in the external preview window.
+If console output is enabled, the external preview window gets its own console panel and a `Show console` / `Hide console` toggle. User code still runs inside a sandboxed iframe in the external window.
 
 ## Validation
 
