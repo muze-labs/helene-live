@@ -1,0 +1,70 @@
+.mle {
+  border: 1px solid #ccc;
+  border-radius: .4rem;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.mle-field + .mle-field,
+.mle-controls,
+.mle-preview {
+  border-top: 1px solid #ccc;
+}
+
+.mle-label {
+  font: 600 .8rem system-ui, sans-serif;
+  padding: .35rem .5rem;
+  background: #f6f6f6;
+}
+
+.mle textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 7rem;
+  margin: 0;
+  padding: .5rem;
+  border: 0;
+  font: .95rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+  tab-size: 2;
+}
+
+.mle textarea[aria-invalid="true"] {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.mle-controls {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: .45rem .5rem;
+  background: #fafafa;
+  font: .875rem system-ui, sans-serif;
+}
+
+.mle-open {
+  font: inherit;
+}
+
+.mle-errors {
+  margin: 0;
+  padding: .5rem .5rem .5rem 1.75rem;
+  border-top: 1px solid #ccc;
+  font: .875rem system-ui, sans-serif;
+}
+
+.mle-preview {
+  min-height: 10rem;
+}
+
+.mle-frame {
+  display: block;
+  width: 100%;
+  min-height: 16rem;
+  border: 0;
+}
+
+.mle[data-preview-external="true"] .mle-preview {
+  display: none;
+}

@@ -1,0 +1,23 @@
+{{- /*
+Render hook for fenced live examples.
+
+Markdown:
+
+```example {title="Counter"}
+--- html
+<button id="count">Clicked 0 times</button>
+
+--- css
+button { font: inherit; }
+
+--- js
+console.log('ready')
+```
+
+Copy this file to: layouts/_markup/render-codeblock-example.html
+*/ -}}
+{{- $title := .Attributes.title | default "" -}}
+{{- $scriptType := .Attributes.scriptType | default "" -}}
+<div data-muze-example{{ with $title }} data-title="{{ . }}"{{ end }}{{ with $scriptType }} data-script-type="{{ . }}"{{ end }}>
+  <template data-muze-example-source>{{ .Inner | htmlEscape }}</template>
+</div>

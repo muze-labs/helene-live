@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muze live example demo</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/muze-nl/helene/src/helene.css">
+  <link rel="stylesheet" href="../muze-live-example.css">
+  <style>
+    body { max-width: 58rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <h1>Muze live example demo</h1>
+
+  <p>This first example uses the compact source format emitted by the Hugo render hook.</p>
+
+  <div data-muze-example data-title="Counter button">
+    <template data-muze-example-source>--- html
+&lt;button id=&quot;count&quot;&gt;Clicked 0 times&lt;/button&gt;
+
+--- css
+button {
+  font: inherit;
+  padding: .5rem .75rem;
+}
+
+--- js
+let clicks = 0
+const button = document.querySelector('#count')
+button.addEventListener('click', () =&gt; {
+  clicks += 1
+  button.textContent = `Clicked ${clicks} times`
+})</template>
+  </div>
+
+  <p>This second example uses explicit textareas, which remain supported.</p>
+
+  <div data-muze-example data-title="CSS-only example">
+    <textarea data-example="html"><p class="note">This example has no JavaScript pane.</p></textarea>
+    <textarea data-example="css">.note {
+  border-left: .35rem solid currentColor;
+  padding-left: .75rem;
+}</textarea>
+  </div>
+
+  <p>This third example shows a single-language source block.</p>
+
+  <div data-muze-example data-title="HTML only">
+    <template data-muze-example-source data-example-language="html">&lt;p&gt;Hello &lt;strong&gt;world&lt;/strong&gt;.&lt;/p&gt;</template>
+  </div>
+
+  <script type="module">
+    // Acorn is optional for this component, but recommended with Helene because
+    // it prevents Helene's JavaScript validation from falling back to eval().
+    import * as acorn from 'https://esm.sh/acorn@8.16.0/es2022/acorn.bundle.mjs'
+    globalThis.acorn = acorn
+
+    import 'https://cdn.jsdelivr.net/gh/simplyedit/simplyflow/src/flow.mjs'
+    import helene from 'https://cdn.jsdelivr.net/gh/muze-nl/helene/src/helene.mjs'
+    import { enhanceLiveExamples } from '../muze-live-example.mjs'
+
+    enhanceLiveExamples({ helene })
+  </script>
+</body>
+</html>

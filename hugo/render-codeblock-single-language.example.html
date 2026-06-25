@@ -1,0 +1,24 @@
+{{- /*
+Optional generic render hook for single-language examples.
+
+This file is intentionally NOT in layouts/_markup because a generic
+render-codeblock.html hook affects every fenced code block on your site.
+Copy this to layouts/_markup/render-codeblock.html only if you do not already
+have a generic code-block hook, or merge the `if .Attributes.example` branch
+into your existing hook.
+
+Markdown:
+
+```html {example=true title="Plain HTML"}
+<p>Hello <strong>world</strong>.</p>
+```
+*/ -}}
+{{- if .Attributes.example -}}
+  {{- $title := .Attributes.title | default "" -}}
+  {{- $scriptType := .Attributes.scriptType | default "" -}}
+  <div data-muze-example{{ with $title }} data-title="{{ . }}"{{ end }}{{ with $scriptType }} data-script-type="{{ . }}"{{ end }}>
+    <template data-muze-example-source data-example-language="{{ .Type }}">{{ .Inner | htmlEscape }}</template>
+  </div>
+{{- else -}}
+  {{- transform.Highlight .Inner .Type .Options -}}
+{{- end -}}
